@@ -33,13 +33,14 @@ Two public sources used locally **They have to be downloaded separately**.
 
 ```
 pip install -r requirements.txt
+
 ```
 
 ## Usage
 
 ```
 python build_iem_dataset.py   # build the labeled dataset
-
+python train.py # train the model and get the loss and accuracy graphs
 ```
 
 ## Nerdy Audiophile Glossary

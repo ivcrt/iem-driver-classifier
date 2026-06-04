@@ -1,6 +1,11 @@
 #will try adding cross validation later
 
+#to prevent the horrid tensorflow warnings
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
+#imports
 from tensorflow import keras
 from tensorflow.keras import layers
 import pandas as pd
@@ -44,10 +49,22 @@ print('val:  ', Counter(y_val))
 
 
 model = keras.Sequential([
-    layers.Dense(64, activation='relu', input_shape=[120]),
-    layers.Dense(64, activation='relu'),    
+
+    keras.Input(shape=(120,)),
+    layers.Dense(32),                         
+    layers.Dropout(0.2),     
+    layers.Activation('relu'),                #dataset is too small for batch normalisation (i tried it, -10% accuracy)   
+
+    layers.Dense(32),                           
+    layers.Dropout(0.2),              
+    layers.Activation('relu'),                  
+                       
+    
+  
     layers.Dense(3, activation='softmax'), # because 3 types of drivers so we cant use a sigmoid
 ])
+
+custom_optimizer = keras.optimizers.Adam(learning_rate=0.0001) # the graph had big jumps so we need to reduce adams speed (normally 0.001)
 model.compile(
     optimizer='adam',
     loss='sparse_categorical_crossentropy', # because 3 categories again
@@ -55,8 +72,8 @@ model.compile(
 )
 
 early_stopping = keras.callbacks.EarlyStopping(
-    patience=10,
-    min_delta=0.01,
+    patience=15,
+    min_delta=0.001,
     restore_best_weights=True,
 )
 
@@ -78,5 +95,5 @@ history_df[['sparse_categorical_accuracy', 'val_sparse_categorical_accuracy']].p
 print(("Best Validation Loss: {:0.4f}" +\
       "\nBest Validation Accuracy: {:0.4f}")\
       .format(history_df['val_loss'].min(), 
-              history_df['val_sparse_categorical_accuracy'].max())) # <-- Correction ici
+              history_df['val_sparse_categorical_accuracy'].max())) # 
 plt.show()
