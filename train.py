@@ -7,12 +7,14 @@ os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
 #imports
 from tensorflow import keras
-from tensorflow.keras import layers
+from keras import layers
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.preprocessing import StandardScaler
 from collections import Counter
 import matplotlib.pyplot as plt
+import numpy as np
+from keras import regularizers 
 
 df = pd.read_csv('outputs/iem_driver_dataset.csv')
 
@@ -23,10 +25,54 @@ y = df['driver_class'].map(label_map).values
 
 X = df.drop(columns=['model', 'source', 'driver_class', 'driver_raw']).values # so only the frequency response curves
 
-print(X.shape)  
-print(y.shape)  
-groups = df['model'].values  #we need it for groupshufflesplit
+ 
 
+num_augmentations = 2 # we want to artificially increase our dataset size to 3 times its original size
+
+
+"""
+test to see what's the maximum shift we can apply
+
+# First curve of the dataset
+curve = X[0] 
+
+# Créons des versions décalées
+curve_shift_1 = np.roll(curve, 1)
+curve_shift_2= np.roll(curve, 2)
+curve_shift_5 = np.roll(curve, 5)
+
+
+plt.plot(curve, label='Original', linewidth=2, color='black')
+plt.plot(curve_shift_1, label='Shift 1 bin ', linestyle='--', color='blue')
+plt.plot(curve_shift_2, label='Shift 2 bin ', linestyle='.', color='green')
+plt.plot(curve_shift_5, label='Shift 5 bins ', linestyle=':', color='red')
+plt.legend()
+plt.title("Impact du décalage de bins sur une courbe")
+plt.show()
+"""
+# so we will use a shift of 1 bins max (=% of the total length of the curve)
+
+
+list_X = [X] # lists that will stock the augmented values
+list_y = [y]
+
+list_groups = [df['model'].values]  #we need it for groupshufflesplit (the groups will be multiplied by 3)
+
+for i in range(num_augmentations):
+    X_aug = X.copy()
+    shifts = np.random.choice([-1, 1], size=len(X))
+    for i in range(len(X_aug)):
+        X_aug[i] = np.roll(X_aug[i], shift=shifts[i])
+    noise = np.random.normal(loc=0.0, scale=0.1, size=X_aug.shape) # 0.1 because an std of 0.1 dB is accepted in the audio world
+    X_aug = X_aug + noise
+    
+    list_X.append(X_aug)
+    list_y.append(y) 
+    list_groups.append(df['model'].values) 
+X = np.concatenate(list_X, axis=0)
+y = np.concatenate(list_y, axis=0)
+groups = np.concatenate(list_groups, axis=0)
+print(f"Dataset size after data augmentation X: {X.shape}, y: {y.shape}")
 
 gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=67) #we need to do that because the same iem has measurements ~ 
 #  ~ from different people so we dont want to risk having the same iem in training and in validation 
@@ -51,13 +97,16 @@ print('val:  ', Counter(y_val))
 model = keras.Sequential([
 
     keras.Input(shape=(120,)),
-    layers.Dense(32),                         
-    layers.Dropout(0.2),     
-    layers.Activation('relu'),                #dataset is too small for batch normalisation (i tried it, -10% accuracy)   
+    layers.Dense(32, kernel_regularizer=regularizers.l2(0.001)),  
+    layers.BatchNormalization(),                         
+    layers.Activation('relu'), 
+    layers.Dropout(0.3),  
+                                                                #dataset is too small for batch normalisation (i tried it, -10% accuracy)   
 
-    layers.Dense(32),                           
-    layers.Dropout(0.2),              
-    layers.Activation('relu'),                  
+    layers.Dense(32, kernel_regularizer=regularizers.l2(0.001)),
+    layers.BatchNormalization(),                         
+    layers.Activation('relu'), 
+    layers.Dropout(0.3),                 
                        
     
   
@@ -66,13 +115,13 @@ model = keras.Sequential([
 
 custom_optimizer = keras.optimizers.Adam(learning_rate=0.0001) # the graph had big jumps so we need to reduce adams speed (normally 0.001)
 model.compile(
-    optimizer='adam',
+    optimizer=custom_optimizer,
     loss='sparse_categorical_crossentropy', # because 3 categories again
     metrics=['sparse_categorical_accuracy'], # same its not binary anymore (Im comparing to the Kaggle course I took)
 )
 
 early_stopping = keras.callbacks.EarlyStopping(
-    patience=15,
+    patience=20,
     min_delta=0.001,
     restore_best_weights=True,
 )
