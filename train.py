@@ -15,6 +15,7 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import numpy as np
 from keras import regularizers 
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, f1_score, classification_report
 
 df = pd.read_csv('outputs/iem_driver_dataset.csv')
 
@@ -23,12 +24,22 @@ df = df[df['driver_class'].isin(['DD', 'BA', 'Hybrid'])] # we'll keep only the m
 label_map = {'DD': 0, 'BA': 1, 'Hybrid': 2}
 y = df['driver_class'].map(label_map).values
 
-X = df.drop(columns=['model', 'source', 'driver_class', 'driver_raw']).values # so only the frequency response curves
+X = df.drop(columns=['model', 'source', 'driver_class', 'driver_raw']).values
+groups = df['model'].values 
 
- 
 
-num_augmentations = 2 # we want to artificially increase our dataset size to 3 times its original size
+gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=67) #we need to do that because the same iem has measurements ~ 
+#  ~ from different people so we dont want to risk having the same iem in training and in validation 
+train_idx, val_idx = next(gss.split(X, y, groups=groups))
 
+X_train, X_val = X[train_idx], X[val_idx]
+y_train, y_val = y[train_idx], y[val_idx]
+
+
+
+num_augmentations = 2  # we want to artificially increase our dataset size to 3 times its original size
+list_X = [X_train] # lists that will stock the augmented values
+list_y = [y_train]
 
 """
 test to see what's the maximum shift we can apply
@@ -47,46 +58,29 @@ plt.plot(curve_shift_1, label='Shift 1 bin ', linestyle='--', color='blue')
 plt.plot(curve_shift_2, label='Shift 2 bin ', linestyle='.', color='green')
 plt.plot(curve_shift_5, label='Shift 5 bins ', linestyle=':', color='red')
 plt.legend()
-plt.title("Impact du décalage de bins sur une courbe")
+plt.title("Impact of the bin shift")
 plt.show()
 """
 # so we will use a shift of 1 bins max (=% of the total length of the curve)
 
-
-list_X = [X] # lists that will stock the augmented values
-list_y = [y]
-
-list_groups = [df['model'].values]  #we need it for groupshufflesplit (the groups will be multiplied by 3)
-
-for i in range(num_augmentations):
-    X_aug = X.copy()
-    shifts = np.random.choice([-1, 1], size=len(X))
+for _ in range(num_augmentations):
+    X_aug = X_train.copy()
+    shifts = np.random.choice([-1, 1], size=len(X_train))
     for i in range(len(X_aug)):
         X_aug[i] = np.roll(X_aug[i], shift=shifts[i])
     noise = np.random.normal(loc=0.0, scale=0.1, size=X_aug.shape) # 0.1 because an std of 0.1 dB is accepted in the audio world
     X_aug = X_aug + noise
-    
     list_X.append(X_aug)
-    list_y.append(y) 
-    list_groups.append(df['model'].values) 
-X = np.concatenate(list_X, axis=0)
-y = np.concatenate(list_y, axis=0)
-groups = np.concatenate(list_groups, axis=0)
-print(f"Dataset size after data augmentation X: {X.shape}, y: {y.shape}")
+    list_y.append(y_train)
 
-gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=67) #we need to do that because the same iem has measurements ~ 
-#  ~ from different people so we dont want to risk having the same iem in training and in validation 
-
-train_idx, val_idx = next(gss.split(X, y, groups=groups))
-
-X_train, X_val = X[train_idx], X[val_idx]
-y_train, y_val = y[train_idx], y[val_idx]
+X_train = np.concatenate(list_X, axis=0)
+y_train = np.concatenate(list_y, axis=0)
+print(f"Train after augmentation: {X_train.shape} | val : {X_val.shape}")
 
 
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
-X_val   = scaler.transform(X_val)  
-
+X_val = scaler.transform(X_val)
 
 print(X_train.shape, X_val.shape)
 print('train:', Counter(y_train))
@@ -145,4 +139,13 @@ print(("Best Validation Loss: {:0.4f}" +\
       "\nBest Validation Accuracy: {:0.4f}")\
       .format(history_df['val_loss'].min(), 
               history_df['val_sparse_categorical_accuracy'].max())) # 
+
+
+y_pred = np.argmax(model.predict(X_val), axis=1)
+print("Macro-F1:", f1_score(y_val, y_pred, average='macro'))
+print(classification_report(y_val, y_pred, target_names=['DD', 'BA', 'Hybrid']))
+cm = confusion_matrix(y_val, y_pred)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['DD', 'BA', 'Hybrid'])
+disp.plot(cmap='Blues')
+plt.title("Confusion Matrix — MLP")
 plt.show()
