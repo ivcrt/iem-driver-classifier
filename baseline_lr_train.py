@@ -15,7 +15,7 @@ groups = df['model'].values
 scaler = StandardScaler()
 
 
-gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=67)
 train_idx, val_idx = next(gss.split(X, y, groups=groups))
 X_train_s = scaler.fit_transform(X[train_idx])
 X_val_s = scaler.transform(X[val_idx])

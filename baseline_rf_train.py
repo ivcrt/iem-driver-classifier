@@ -11,7 +11,7 @@ y = df['driver_class'].map(label_map).values
 X = df.drop(columns=['model', 'source', 'driver_class', 'driver_raw']).values
 groups = df['model'].values
 
-gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=67)
 train_idx, val_idx = next(gss.split(X, y, groups=groups))
 
 forest = RandomForestClassifier(random_state=1)
