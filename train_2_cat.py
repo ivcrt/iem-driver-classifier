@@ -17,6 +17,8 @@ import numpy as np
 from keras import regularizers 
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, f1_score, classification_report
 
+from sklearn.utils.class_weight import compute_class_weight
+
 df = pd.read_csv('outputs/iem_driver_dataset.csv')
 
 df = df[df['driver_class'].isin(['DD', 'BA'])] # we'll keep only the most represented ones because the others are under-represented
@@ -121,11 +123,19 @@ early_stopping = keras.callbacks.EarlyStopping(
     restore_best_weights=True,
 )
 
+class_weights = compute_class_weight(
+                                class_weight = "balanced", #calculates weights inversely proportionnal to the class's frequency
+                                classes = np.unique(y_train),
+                                y = y_train                                                    
+                            )
+class_weights_dict = dict(zip(np.unique(y_train), class_weights))
+
 history = model.fit(
     X_train, y_train,
     validation_data=(X_val, y_val),
     batch_size=32,
     epochs=300,
+    class_weight=class_weights_dict,
     callbacks=[early_stopping],
    
 )
