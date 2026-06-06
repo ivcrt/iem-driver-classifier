@@ -40,7 +40,7 @@ pip install -r requirements.txt
 
 ```
 python build_iem_dataset.py   # build the labeled dataset
-python train.py # train the model and get the loss and accuracy graphs
+python [file name containing the word 'train'].py # train the different models and get the loss and accuracy graphs
 ```
 
 ## Nerdy Audiophile Glossary
