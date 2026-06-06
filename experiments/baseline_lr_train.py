@@ -5,7 +5,7 @@ from sklearn.metrics import accuracy_score, f1_score
 
 import pandas as pd
 
-df = pd.read_csv('outputs/iem_driver_dataset.csv')
+df = pd.read_csv('../outputs/iem_driver_dataset.csv')
 df = df[df['driver_class'].isin(['DD', 'BA', 'Hybrid'])]
 
 label_map = {'DD': 0, 'BA': 1, 'Hybrid': 2}

@@ -17,7 +17,9 @@ import numpy as np
 from keras import regularizers 
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, f1_score, classification_report
 
-df = pd.read_csv('outputs/iem_driver_dataset.csv')
+from sklearn.utils.class_weight import compute_class_weight
+
+df = pd.read_csv('../outputs/iem_driver_dataset.csv')
 
 df = df[df['driver_class'].isin(['DD', 'BA', 'Hybrid'])] # we'll keep only the most represented ones because the others are under-represented
 
@@ -37,7 +39,7 @@ y_train, y_val = y[train_idx], y[val_idx]
 
 
 
-num_augmentations = 2  # we want to artificially increase our dataset size to 3 times its original size
+num_augmentations = 0  # we want to artificially increase our dataset size to 2 times its original size
 list_X = [X_train] # lists that will stock the augmented values
 list_y = [y_train]
 
@@ -89,29 +91,27 @@ print('val:  ', Counter(y_val))
 
 
 model = keras.Sequential([
-
     keras.Input(shape=(120,)),
-    layers.Dense(32, kernel_regularizer=regularizers.l2(0.001)),  
-    layers.BatchNormalization(),                         
-    layers.Activation('relu'), 
-    layers.Dropout(0.3),  
-                                                                #dataset is too small for batch normalisation (i tried it, -10% accuracy)   
-
-    layers.Dense(32, kernel_regularizer=regularizers.l2(0.001)),
-    layers.BatchNormalization(),                         
-    layers.Activation('relu'), 
-    layers.Dropout(0.3),                 
-                       
+    layers.Reshape((120, 1)), 
+    layers.Conv1D(filters=32, kernel_size=5, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
+    layers.MaxPooling1D(pool_size=2),
+    layers.Dropout(0.2), 
     
+    layers.Conv1D(filters=64, kernel_size=3, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
+    layers.MaxPooling1D(pool_size=2),
+    layers.Dropout(0.5),
+    layers.Flatten(),
+    layers.Dense(16, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
+    layers.Dropout(0.5),
   
-    layers.Dense(3, activation='softmax'), # because 3 types of drivers so we cant use a sigmoid
+    layers.Dense(3, activation='softmax'), 
 ])
 
 custom_optimizer = keras.optimizers.Adam(learning_rate=0.0001) # the graph had big jumps so we need to reduce adams speed (normally 0.001)
 model.compile(
     optimizer=custom_optimizer,
-    loss='sparse_categorical_crossentropy', # because 3 categories again
-    metrics=['sparse_categorical_accuracy'], # same its not binary anymore (Im comparing to the Kaggle course I took)
+    loss='sparse_categorical_crossentropy', 
+    metrics=['sparse_categorical_accuracy'], 
 )
 
 early_stopping = keras.callbacks.EarlyStopping(
@@ -120,11 +120,19 @@ early_stopping = keras.callbacks.EarlyStopping(
     restore_best_weights=True,
 )
 
+class_weights = compute_class_weight(
+                                class_weight = "balanced", #calculates weights inversely proportionnal to the class's frequency
+                                classes = np.unique(y_train),
+                                y = y_train                                                    
+                            )
+class_weights_dict = dict(zip(np.unique(y_train), class_weights))
+
 history = model.fit(
     X_train, y_train,
     validation_data=(X_val, y_val),
     batch_size=32,
     epochs=300,
+    class_weight=class_weights_dict,
     callbacks=[early_stopping],
    
 )

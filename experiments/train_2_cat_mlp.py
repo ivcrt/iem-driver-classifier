@@ -19,7 +19,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, f1_score, 
 
 from sklearn.utils.class_weight import compute_class_weight
 
-df = pd.read_csv('outputs/iem_driver_dataset.csv')
+df = pd.read_csv('../outputs/iem_driver_dataset.csv')
 
 df = df[df['driver_class'].isin(['DD', 'BA'])] # we'll keep only the most represented ones because the others are under-represented
 

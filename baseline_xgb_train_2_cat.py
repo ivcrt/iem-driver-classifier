@@ -18,7 +18,7 @@ scale_weight = sum(y[train_idx] == 0) / sum(y[train_idx] == 1)
 
 xgb_model = XGBClassifier(
     random_state=1,
-    scale_pos_weight=scale_weight,
+    scale_pos_weight=scale_weight, # because we have 562 DD and 469 BA Drivers
     eval_metric='logloss'
 )
 
