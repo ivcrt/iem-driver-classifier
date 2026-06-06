@@ -18,6 +18,7 @@ from keras import regularizers
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, f1_score, classification_report, accuracy_score
 
 from sklearn.utils.class_weight import compute_class_weight
+import joblib
 
 df = pd.read_csv('outputs/iem_driver_dataset.csv')
 
@@ -41,6 +42,7 @@ train_idx, val_idx = next(gss.split(X, y, groups=groups))
 N_SEEDS = 5
 accs, f1s = [], []
 last_history, last_pred = None, None
+best_f1_overall = 0.0
 
 for seed in range(N_SEEDS):
     keras.utils.set_random_seed(seed)
@@ -149,6 +151,7 @@ for seed in range(N_SEEDS):
 
 
     history_df = pd.DataFrame(history.history)
+    
 
     history_df[['loss', 'val_loss']].plot(title="Loss")
     history_df[['binary_accuracy', 'val_binary_accuracy']].plot(title="Accuracy")
@@ -164,6 +167,12 @@ for seed in range(N_SEEDS):
     f1s.append(f1_score(y_val, y_pred, average='macro'))
     print(f"seed {seed}: acc={accs[-1]:.3f}  macro-F1={f1s[-1]:.3f}")
     last_history, last_pred = history, y_pred
+    if f1s[-1] > best_f1_overall:
+        best_f1_overall = f1s[-1]
+        os.makedirs('saved_models', exist_ok=True)
+        joblib.dump(scaler, 'saved_models/scaler.pkl')
+        model.save('saved_models/best_iem_cnn_model.keras')
+        print(f"  -> Nouveau meilleur modèle sauvegardé ! (F1: {f1s[-1]:.3f})")
 
 print(f"\n=== 1D CNN over {N_SEEDS} seeds ===")
 print(f"Accuracy : {np.mean(accs):.3f} +/- {np.std(accs):.3f}")
