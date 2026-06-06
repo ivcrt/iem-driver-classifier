@@ -99,7 +99,7 @@ model = keras.Sequential([
     layers.Conv1D(filters=32, kernel_size=3, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
     layers.MaxPooling1D(pool_size=2),
     layers.Conv1D(filters=64, kernel_size=3, activation='relu'),
-    layers.GlobalAveragePooling1D(),
+    layers.Flatten(),
     layers.Dense(32, kernel_regularizer=regularizers.l2(0.001)),                        
     layers.Activation('relu'), 
     layers.Dropout(0.3),  
