@@ -28,7 +28,7 @@ def digits(s):
  
 def driver_class(cfg):
     c = cfg.lower()
-    if 'planar' in c: return 'Planar'
+    if 'planar' in c: return 'Planar'     # all the driver technology names but we'll only need ba and dd, the others are under-represented and hybrid ones are too complicated to indentify because they're hybrid...
     if 'est' in c:    return 'Tribrid/EST'
     if 'bc' in c:     return 'Other'
     has_ba, has_dd = 'ba' in c, 'dd' in c
