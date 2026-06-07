@@ -1,7 +1,7 @@
 # IEM Driver Type Classification
 
 Predicting the driver technology of in-ear monitors from their
-frequency-response curve using a small neural network. (Will try using a CNN later)
+frequency-response curve using a small neural network. 
 
 The interesting part of this project isn't its accuracy number, it's the question *how much does the frequency response curve tell you about the
 hardware inside?* 
