@@ -39,6 +39,7 @@ After filtering to the studied classes, we end up with **1 031 curves** for DD v
 - **Grouped split.** The same IEM was measured by multiple headphone reviewers. So we need to make those measures dependent, otherwise we'll end up with the same IEM in both training in validation. I used `GroupShuffleSplit` by regrouping those measurements by model name.
 - **Data augmentation.** Each training curve has two clones with a ±1-bin shift and Gaussian noise of +0.1dB. 
 - **Class imbalance.** The weights are balanced according to the frequency of a class in the dataset.
+- **Hyperparameter search with optuna** Hyperparameter search with Optuna (30 trials) was explored but did not improve multi-seed evaluation, most likely due to overfitting to the validation set on a small dataset.
 
 ## Models used for the comparison
  Logistic Regression, Random Forest, XGBoost, and a **1D CNN**.

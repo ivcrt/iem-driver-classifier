@@ -20,6 +20,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, f1_score, 
 from sklearn.utils.class_weight import compute_class_weight
 import joblib
 
+
 df = pd.read_csv('outputs/iem_driver_dataset.csv')
 
 df = df[df['driver_class'].isin(['DD', 'BA'])] # we'll keep only the most represented ones because the others are under-represented
@@ -38,6 +39,67 @@ train_idx, val_idx = next(gss.split(X, y, groups=groups))
 
 
 #adding a for loop to run the training 5 times and get an average accuracy and F1
+# used optuna to find the best hyperparameters
+'''def augment(X_in, n=2):
+    parts = [X_in]
+    for _ in range(n):
+        X_aug = X_in.copy()
+        shifts = np.random.choice([-1, 1], size=len(X_in))
+        for i in range(len(X_aug)):
+            X_aug[i] = np.roll(X_aug[i], shift=shifts[i])
+        parts.append(X_aug + np.random.normal(0.0, 0.1, size=X_aug.shape))
+    return np.concatenate(parts, axis=0)
+def objective(trial):
+    keras.utils.set_random_seed(42)  # fixe pour tous les trials
+
+    lr       = trial.suggest_float('lr', 1e-5, 1e-3, log=True)
+    dropout  = trial.suggest_float('dropout', 0.1, 0.5)
+    l2       = trial.suggest_float('l2', 1e-4, 1e-2, log=True)
+    f1       = trial.suggest_categorical('filters1', [8, 16, 32])
+    f2       = trial.suggest_categorical('filters2', [16, 32, 64])
+    f3       = trial.suggest_categorical('filters3', [32, 64, 128])
+    dense    = trial.suggest_categorical('dense', [16, 32, 64])
+
+    X_tr = augment(X[train_idx])
+    y_tr = np.concatenate([y[train_idx]] * 3)
+    scaler = StandardScaler()
+    X_tr = scaler.fit_transform(X_tr)
+    X_val_s = scaler.transform(X[val_idx])
+
+    cw = compute_class_weight('balanced', classes=np.unique(y_tr), y=y_tr)
+    cw_dict = dict(zip(np.unique(y_tr), cw))
+
+    model = keras.Sequential([
+        keras.Input(shape=(120,)),
+        layers.Reshape((120, 1)),
+        layers.Conv1D(f1, 5, activation='relu', kernel_regularizer=regularizers.l2(l2)),
+        layers.MaxPooling1D(2),
+        layers.Conv1D(f2, 3, activation='relu', kernel_regularizer=regularizers.l2(l2)),
+        layers.MaxPooling1D(2),
+        layers.Conv1D(f3, 3, activation='relu'),
+        layers.Flatten(),
+        layers.Dense(dense, kernel_regularizer=regularizers.l2(l2)),
+        layers.Activation('relu'),
+        layers.Dropout(dropout),
+        layers.Dense(1, activation='sigmoid'),
+    ])
+    model.compile(optimizer=keras.optimizers.Adam(lr),
+                  loss='binary_crossentropy', metrics=['binary_accuracy'])
+    model.fit(X_tr, y_tr, validation_data=(X_val_s, y[val_idx]),
+              batch_size=32, epochs=200, class_weight=cw_dict,
+              callbacks=[keras.callbacks.EarlyStopping(patience=15,
+                         restore_best_weights=True)], verbose=0)
+
+    y_pred = (model.predict(X_val_s, verbose=0) > 0.5).astype(int).flatten()
+    return f1_score(y[val_idx], y_pred, average='macro')
+
+
+study = optuna.create_study(direction='maximize')
+study.optimize(objective, n_trials=30, show_progress_bar=True)
+
+print("Best macro-F1:", study.best_value)
+print("Best params:", study.best_params)
+'''
 
 N_SEEDS = 5
 accs, f1s = [], []
@@ -53,6 +115,7 @@ for seed in range(N_SEEDS):
     num_augmentations = 2  # we want to artificially increase our dataset size to 3 times its original size
     list_X = [X_train] # lists that will stock the augmented values
     list_y = [y_train]
+    
 
     """
     test to see what's the maximum shift we can apply
@@ -100,7 +163,6 @@ for seed in range(N_SEEDS):
     print('val:  ', Counter(y_val))
 
 
-
     model = keras.Sequential([
 
         keras.Input(shape=(120,)),
@@ -145,6 +207,7 @@ for seed in range(N_SEEDS):
         epochs=300,
         class_weight=class_weights_dict,
         callbacks=[early_stopping],
+        verbose=2
     
     )
 
@@ -186,4 +249,4 @@ cm = confusion_matrix(y_val, last_pred)
 disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['DD', 'BA'])
 disp.plot(cmap='Blues')
 plt.title("Confusion Matrix — 1D CNN")
-plt.show()
+plt.show() 
