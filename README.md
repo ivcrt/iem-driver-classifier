@@ -50,11 +50,12 @@ task, 353 for the 3-class task).
 
 | Task / Model | Accuracy | Macro-F1 |
 |---|---|---|
+| 3-class (DD/BA/Hybrid) — MLP | 0.573 ± 0.018 | 0.550 ± 0.012 |
 | Binary (DD vs BA) — Majority baseline | 0.685 | 0.406 |
 | Binary — Logistic Regression | 0.724 | 0.683 |
 | Binary — Random Forest | 0.724 | 0.672 |
 | Binary — XGBoost | 0.695 | 0.633 |
-| **Binary — 1D CNN (5 seeds)** | **0.802 ± 0.038** | **76.3 ± 5.1** |
+| **Binary — 1D CNN (5 seeds)** | **0.802 ± 0.038** | **0.763 ± 0.051** |
 
 
 - The CNN beats the baselines, so its additionnal complexity is needed to classify Frequency Response curves
@@ -77,20 +78,6 @@ Two public sources used locally **They have to be downloaded separately**.
 
 > We only use the ranking list data to obtain IEM + Driver Technology couples to then 
 > add a "Driver Technology" Column to our dataset
-
-## Results
-
-All numbers on the same grouped split (validation = 203 IEMs for the binary
-task, 353 for the 3-class task).
-
-| Task / Model | Accuracy | Macro-F1 |
-|---|---|---|
-| 3-class (DD/BA/Hybrid) — MLP | 0.573 ± 0.018 | 0.550 ± 0.012 |
-| Binary (DD vs BA) — Majority baseline | 0.685 | 0.406 |
-| Binary — Logistic Regression | 0.724 | 0.683 |
-| Binary — Random Forest | 0.724 | 0.672 |
-| Binary — XGBoost | 0.695 | 0.633 |
-| **Binary — 1D CNN (5 seeds)** | **0.797 ± 0.041** | **0.756 ± 0.056** |
 
 
 ### Regenerating the dataset
